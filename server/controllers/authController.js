@@ -152,7 +152,7 @@ exports.forgotPassword = async (req, res) => {
     res.json({ message: "Password reset link sent" });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
-    console.error(errror.message);
+    console.error(error.message);
   }
 };
 
@@ -178,43 +178,63 @@ exports.resetPassword = async (req, res) => {
 // ✅ Verify Transaction PIN
 exports.resendOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, type = "register" } = req.body;
+    // type can be "register" or "forgotPassword"
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    if (user.isVerified) {
-      return res.status(400).json({ message: "User already verified" });
+    // Check based on type
+    if (type === "register") {
+      if (user.isVerified) {
+        return res.status(400).json({ message: "User already verified" });
+      }
     }
 
     // Generate new OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000);
 
-    // Overwrite any existing OTP
+    // Store OTP in DB with purpose
     await Otp.findOneAndUpdate(
       { email },
-      { otp: otpCode, expiresAt: Date.now() + 10 * 60 * 1000 },
+      {
+        otp: otpCode,
+        purpose: type, // save if it's for register or forgotPassword
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      },
       { upsert: true, new: true }
     );
 
     // Send OTP via email
+    const subject =
+      type === "forgotPassword"
+        ? "Password Reset OTP"
+        : "Resend OTP - Verify your account";
+
+    const text =
+      type === "forgotPassword"
+        ? `Your OTP to reset your password is ${otpCode}`
+        : `Your new OTP for verification is ${otpCode}`;
+
     await transporter.sendMail({
       from: `<${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Resend OTP - Verify your account",
-      text: `Your new OTP is ${otpCode}`,
+      subject,
+      text,
     });
 
-    res.json({ message: "New OTP sent to email" });
+    res.json({ message: `New OTP sent to email for ${type}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 exports.sendOtp = async (req, res) => {
   try {
     const otp = crypto.randomInt(100000, 999999).toString();
     req.user.otp = otp;
+    console.log(otp);
     req.user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 min
     await req.user.save();
 

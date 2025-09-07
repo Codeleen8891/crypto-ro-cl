@@ -13,18 +13,32 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// controllers/userController.js
 exports.updateProfile = async (req, res) => {
   try {
-    const updates = req.body;
+    const updates = { ...req.body };
+
     if (req.file) {
-      updates.avatar = req.file.path;
+      // save the path in a forward-slash form (helps windows path issues)
+      updates.photo = req.file.path.replace(/\\/g, "/");
     }
 
     const user = await User.findByIdAndUpdate(req.user.id, updates, {
       new: true,
     });
-    res.json(user);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // convert to plain object so we can add alias fields cleanly
+    const userObj = user.toObject ? user.toObject() : { ...user };
+
+    // ensure compatibility with frontend which expects `photo`
+    userObj.photo = userObj.photo || userObj.avatar || "";
+
+    res.json(userObj);
+    console.log("user info updated:", userObj);
   } catch (error) {
+    console.error("updateProfile error:", error);
     res.status(500).json({ message: error.message });
   }
 };
