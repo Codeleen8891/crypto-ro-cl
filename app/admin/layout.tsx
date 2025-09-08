@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-export const revalidate = 0; // MUST be number, not {}
+export const revalidate = 0;
 
 import Protected from "@/components/Protected";
 import { ReactNode } from "react";
