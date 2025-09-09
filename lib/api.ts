@@ -1,7 +1,7 @@
 // lib/api.ts
 "use client";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// export const dynamic = "force-dynamic";
+// export const revalidate = 0;
 
 import type { User, ChatMessage } from "../types";
 
@@ -60,6 +60,7 @@ export async function apiFetch<T>(
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: options.method || "GET",
     headers,
+    next: { revalidate: 0 },
     body: options.body
       ? isForm
         ? (options.body as FormData)

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = false;
 import "./globals.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
