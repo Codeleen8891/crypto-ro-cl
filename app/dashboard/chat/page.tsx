@@ -235,7 +235,7 @@ export default function UserChatPage() {
       <div className="h-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur flex flex-col">
         {/* Header */}
         <div className="p-3 border-b border-white/10">
-          <div className="font-semibold">(Admin) Ready to hear from you!!!</div>
+          <div className="font-semibold">Have a Converation with the Admin</div>
           <div className="text-xs opacity-70">
             {me ? `Signed in as ${me.name}` : "Loading…"}
           </div>
