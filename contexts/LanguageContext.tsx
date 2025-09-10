@@ -10,7 +10,7 @@ const translations = {
       "Hey {name}, we are thrilled to have you on board! Our platform is designed to help you achieve your financial goals through smart investing and expert insights. Get started by exploring our resources, learning about our investment options, and connecting with our community. We're here to support you every step of the way. Happy investing!",
     shares: "Shares",
     referrals: "Referrals",
-    latestMessages: "Latest Messages from Admin",
+    latestMessages: "Latest Discussion with the Admin",
   },
   zh: {
     welcomeTitle: "欢迎来到 Crypto Royal!",

@@ -140,6 +140,11 @@ export const userApi = {
       method: "GET",
       token,
     }),
+  getReferralInfo: (token?: string) =>
+    apiFetch<{ referralCode: string; referrals: User[] }>("/users/referral", {
+      method: "GET",
+      token,
+    }),
 };
 
 // ----------------- CHAT API -----------------
@@ -222,15 +227,25 @@ export const chatApi = {
    * using the current userId in localStorage.
    */
   getConversations: async (token?: string) => {
-    const { userId } = getIds();
-    if (!userId) return [];
+    const { userId, adminId } = getIds();
+    if (!userId || !adminId) return [];
+
     const msgs = await apiFetch<ChatMessage[]>(`/chat/${userId}`, {
       method: "GET",
       token,
     });
     if (!Array.isArray(msgs) || msgs.length === 0) return [];
 
-    const last = msgs[msgs.length - 1];
+    // find the last message from admin
+    const lastAdminMsg = [...msgs].reverse().find((m) => {
+      const sender =
+        typeof m.sender === "object" ? (m.sender as any)._id : m.sender;
+      return sender === adminId;
+    });
+
+    // fallback if no admin message exists yet
+    const last = lastAdminMsg || msgs[msgs.length - 1];
+
     const preview =
       last?.message ||
       (last?.type === "image"
@@ -244,12 +259,18 @@ export const chatApi = {
     return [
       {
         _id: last?._id || `conv-${userId}`,
-        userId, // clicking can still route to /chat/:userId
+        userId,
         lastMessage: preview || "",
         updatedAt: last?.createdAt || new Date().toISOString(),
       },
     ];
   },
+
+  deleteMessage: (messageId: string, token?: string) =>
+    apiFetch<{ message: string }>(`/chat/message/${messageId}`, {
+      method: "DELETE",
+      token,
+    }),
 };
 
 // ----------------- AUTH API -----------------

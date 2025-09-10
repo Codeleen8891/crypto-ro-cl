@@ -9,7 +9,7 @@ export default function Home() {
         </h1>
         <p className="mt-3 text-gray-600 dark:text-gray-300">
           Track earnings, deposit with QR, withdraw to bank, all in a beautiful
-          dashboard.
+          dashboard. Switch to Desktop site for a better user experience
         </p>
         <div className="mt-6 flex gap-4 justify-center">
           <Link href="/register" className="btn-primary rounded-2xl p-5">

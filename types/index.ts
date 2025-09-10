@@ -42,6 +42,6 @@ export interface ChatMessage {
   receiver: string; // userId
   message?: string;
   fileUrl?: string;
-  type: "text" | "image" | "audio" | "emoji" | "file";
+  type: "text" | "image" | "audio" | "emoji" | "file" | "deleted";
   createdAt: string;
 }

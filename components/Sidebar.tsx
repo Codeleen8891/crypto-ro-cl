@@ -5,7 +5,16 @@ import { Home, Settings, MessageCircle, User2 } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { userApi } from "@/lib/api";
-import { useLanguage } from "@/contexts/LanguageContext"; // ✅ import context
+import { useLanguage } from "@/contexts/LanguageContext";
+// ✅ import context
+
+function fixUrl(u?: string | null) {
+  if (!u) return "";
+  if (u.startsWith("http")) return u;
+  return `${process.env.NEXT_PUBLIC_API_URLL}${
+    u.startsWith("/") ? u : `/${u}`
+  }`;
+}
 
 // ✅ dictionary for sidebar items
 const navTranslations = {
@@ -94,11 +103,7 @@ export default function Sidebar() {
         <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-white/20 mb-2 flex items-center justify-center bg-brand-700 text-white text-2xl font-bold">
           {me?.photo ? (
             <img
-              src={
-                me.photo.startsWith("http")
-                  ? me.photo
-                  : `${process.env.NEXT_PUBLIC_API_URLL}${me.photo}`
-              }
+              src={fixUrl(me?.photo)}
               alt="User photo"
               className="w-full h-full object-cover"
             />

@@ -27,6 +27,7 @@ export default function DashboardHome() {
       userId: string;
       lastMessage: string;
       updatedAt: string;
+      sender?: string;
     }>
   >([]);
 
@@ -39,9 +40,11 @@ export default function DashboardHome() {
 
         const s = await userApi.stats();
         setStats(s);
+        console.log(stats);
 
         const chats = await chatApi.getConversations();
         setMessages(chats.slice(0, 10)); // latest 10
+        console.log(messages);
         console.log(messages);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -92,26 +95,34 @@ export default function DashboardHome() {
       <section className="card p-6">
         <h3 className="font-semibold mb-3 flex items-center gap-2">
           <MessageSquare size={18} />
-          {t.latestMessages || "Latest Messages from Admin"}
+          {t.latestMessages || "Latest Discussion with the Admin"}
         </h3>
         <ul className="space-y-3">
           {messages.length === 0 ? (
             <li className="text-gray-500 text-sm">No messages yet.</li>
           ) : (
-            messages.map((msg) => (
-              <li
-                key={msg._id}
-                className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 cursor-pointer transition"
-                onClick={() => router.push(`/dashboard/chat`)}
-              >
-                <p className="text-sm text-gray-800 truncate">
-                  {msg.lastMessage}
-                </p>
-                <span className="text-xs text-gray-500">
-                  {new Date(msg.updatedAt).toLocaleString()}
-                </span>
-              </li>
-            ))
+            messages.map((msg) => {
+              const isMe = msg.sender === me?._id;
+              return (
+                <li
+                  key={msg._id}
+                  className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 cursor-pointer transition"
+                  onClick={() => router.push(`/dashboard/chat`)}
+                >
+                  <p className="text-xs font-semibold text-gray-600 mb-1">
+                    {isMe
+                      ? "This Message was sent by me:"
+                      : "Latest Message Recieved from the Admin:"}
+                  </p>
+                  <p className="text-sm text-gray-800 truncate">
+                    {msg.lastMessage}
+                  </p>
+                  <span className="text-xs text-gray-500">
+                    {new Date(msg.updatedAt).toLocaleString()}
+                  </span>
+                </li>
+              );
+            })
           )}
         </ul>
 

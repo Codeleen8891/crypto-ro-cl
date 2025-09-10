@@ -45,7 +45,9 @@ const socket = io(API_URL, { autoConnect: true });
 function fixUrl(u?: string | null) {
   if (!u) return "";
   if (u.startsWith("http")) return u;
-  return `${API_URL}${u.startsWith("/") ? u : `/${u}`}`;
+  return `${process.env.NEXT_PUBLIC_API_URLL}${
+    u.startsWith("/") ? u : `/${u}`
+  }`;
 }
 
 export default function AdminChatPage() {
@@ -62,7 +64,9 @@ export default function AdminChatPage() {
     []
   );
 
-  const [users, setUsers] = useState<(User & { unread?: number })[]>([]);
+  const [users, setUsers] = useState<
+    (User & { unread?: number; lastMessageAt?: string })[]
+  >([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -134,12 +138,30 @@ export default function AdminChatPage() {
 
   // Load messages
   useEffect(() => {
+    (async () => {
+      try {
+        const list = await adminApi.usersList(token);
+        setUsers(list);
+      } catch (e) {
+        console.error("usersList error", e);
+      }
+    })();
+  }, [token]);
+
+  // --- load messages & update lastMessageAt
+  useEffect(() => {
     if (!selected?._id) return;
     (async () => {
       try {
         const conv = await chatApi.getConversation(selected._id, token);
+
+        const sorted = conv.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
         setMessages(
-          conv.map((m) => ({
+          sorted.map((m) => ({
             ...m,
             sender:
               typeof m.sender === "object" ? (m.sender as any)._id : m.sender,
@@ -147,19 +169,36 @@ export default function AdminChatPage() {
               typeof m.receiver === "object"
                 ? (m.receiver as any)._id
                 : m.receiver,
-
             fileUrl: fixUrl(m.fileUrl),
           }))
         );
+
+        // update lastMessageAt
+        if (sorted.length > 0) {
+          const last = sorted[sorted.length - 1];
+          setUsers((prev) =>
+            prev.map((u) =>
+              u._id === selected._id
+                ? { ...u, lastMessageAt: last.createdAt }
+                : u
+            )
+          );
+        }
       } catch (e) {
         console.error("getConversation error", e);
       }
     })();
   }, [selected, token]);
-
   // autoscroll
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = endRef.current?.parentElement;
+    if (!el) return;
+
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100; // px threshold
+
+    if (isNearBottom) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const filtered = users.filter((u) =>
@@ -275,6 +314,45 @@ export default function AdminChatPage() {
     }
   };
 
+  // ✅ sort messages before rendering
+  const sortedMessages = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  const sortedUsers = [...filtered].sort((a, b) => {
+    const aLast = messages
+      .filter((m) => m.sender === a._id || m.receiver === a._id)
+      .pop();
+    const bLast = messages
+      .filter((m) => m.sender === b._id || m.receiver === b._id)
+      .pop();
+
+    const aTime = aLast ? new Date(aLast.createdAt).getTime() : 0;
+    const bTime = bLast ? new Date(bLast.createdAt).getTime() : 0;
+
+    return bTime - aTime; // latest first
+  });
+
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      await chatApi.deleteMessage(id, token);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === id
+            ? {
+                ...m,
+                type: "deleted",
+                message: "This message was deleted",
+                fileUrl: "",
+              }
+            : m
+        )
+      );
+    } catch (e) {
+      console.error("deleteMessage error", e);
+    }
+  };
+
   return (
     <div className="h-screen grid grid-cols-1 md:grid-cols-[20rem_1fr] gap-3 p-3">
       {/* Sidebar */}
@@ -321,7 +399,7 @@ export default function AdminChatPage() {
             >
               {u.photo ? (
                 <img
-                  src={u.photo}
+                  src={fixUrl(u.photo)}
                   alt={u.name}
                   className="w-10 h-10 rounded-full object-cover"
                 />
@@ -353,7 +431,7 @@ export default function AdminChatPage() {
             <>
               {selected.photo ? (
                 <img
-                  src={selected.photo}
+                  src={fixUrl(selected.photo)}
                   alt={selected.name}
                   className="w-10 h-10 rounded-full object-cover"
                 />
@@ -383,13 +461,15 @@ export default function AdminChatPage() {
         </div>
 
         {/* Messages */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 max-h-[calc(100vh-12rem)]">
           {selected ? (
-            messages.map((m) => (
+            sortedMessages.map((m) => (
               <ChatBubble
                 key={m._id || `${m.sender}-${m.createdAt}`}
                 msg={m}
                 me={me}
+                onDelete={handleDeleteMessage} // 👈 add this
               />
             ))
           ) : (

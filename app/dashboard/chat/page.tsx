@@ -32,6 +32,9 @@ export default function UserChatPage() {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const [preview, setPreview] = useState<{
     url: string;
     kind: "image" | "audio";
@@ -243,13 +246,27 @@ export default function UserChatPage() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 h-0">
-          {messages.map((m, idx) => (
-            <ChatBubble
-              key={`${m._id || "local"}-${m.createdAt || Date.now()}-${idx}`}
-              msg={m}
-              me={me?._id || ""}
-            />
-          ))}
+          {messages
+            .sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            )
+            .map((m, idx) => (
+              <div
+                key={`${m._id || "local"}-${m.createdAt || Date.now()}-${idx}`}
+                // ✅ only allow delete modal on *my* messages
+                onClick={() => {
+                  if (m.sender === me?._id) {
+                    setDeleteTarget(m);
+                  }
+                }}
+                className={m.sender === me?._id ? "cursor-pointer" : ""}
+              >
+                <ChatBubble msg={m} me={me?._id || ""} />
+              </div>
+            ))}
+
           <div ref={endRef} />
         </div>
 
@@ -295,6 +312,49 @@ export default function UserChatPage() {
                     {uploading ? "Sending…" : "Send"}
                   </Button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {deleteTarget && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 w-80 shadow-lg text-black">
+                <h2 className="font-semibold mb-4">Delete message?</h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete this{" "}
+                  {deleteTarget.type === "image"
+                    ? "image"
+                    : deleteTarget.type === "audio"
+                    ? "audio"
+                    : "message"}
+                  ?
+                </p>
+                <div className="flex justify-end gap-3">
+                  <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!deleteTarget?._id) return;
+                      setDeleting(true);
+                      try {
+                        await chatApi.deleteMessage(deleteTarget._id, token);
+                        setMessages((prev) =>
+                          prev.filter((m) => m._id !== deleteTarget._id)
+                        );
+                        setDeleteTarget(null);
+                      } catch (err) {
+                        console.error("Delete failed", err);
+                      } finally {
+                        setDeleting(false);
+                      }
+                    }}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting…" : "Delete"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

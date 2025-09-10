@@ -1,40 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { authApi } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { authApi, userApi } from "@/lib/api";
 import { UserPlus } from "lucide-react";
 
 export default function RegisterPage() {
   const r = useRouter();
+  const searchParams = useSearchParams();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
+  const [referral, setReferral] = useState(""); // 👈 holds inviter code
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // 👇 On mount, read ?ref=XXXX from URL
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) setReferral(refCode);
+  }, [searchParams]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
+
     try {
+      // Register new user
       const formData = new FormData();
       formData.append("name", name);
       formData.append("email", email);
       formData.append("password", password);
       if (photo) formData.append("photo", photo);
+      if (referral.trim()) formData.append("referralCode", referral.trim()); // ✅ include here
 
-      await authApi.register(formData);
+      // Register user (returns { token, user })
+      const { token } = await authApi.register(formData);
 
       alert("✅ OTP sent to your email");
       r.push(`/verify-otp?email=${email}`);
     } catch (err: any) {
-      const msg =
-        err?.message ||
-        err?.response?.data?.message || // if backend sends { message: "Invalid credentials" }
-        "Registration failed";
-      setError(msg);
+      setError(err?.message || "Registration failed");
     } finally {
       setBusy(false);
     }
@@ -83,6 +92,15 @@ export default function RegisterPage() {
             accept="image/*"
             onChange={(e) => setPhoto(e.target.files?.[0] || null)}
             className="input file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-brand-500 file:text-white hover:file:bg-brand-600"
+          />
+
+          {/* ✅ Optional referral input */}
+          <input
+            className="input"
+            placeholder="Referral Code (optional)"
+            type="text"
+            value={referral}
+            onChange={(e) => setReferral(e.target.value)}
           />
 
           <button className="btn btn-primary w-full" disabled={busy}>

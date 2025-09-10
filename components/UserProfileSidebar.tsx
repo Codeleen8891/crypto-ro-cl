@@ -9,6 +9,14 @@ export default function UserProfileSidebar({
   user: ChatUser;
   onClose: () => void;
 }) {
+  function fixUrl(u?: string | null) {
+    if (!u) return "";
+    if (u.startsWith("http")) return u;
+    return `${process.env.NEXT_PUBLIC_API_URLL}${
+      u.startsWith("/") ? u : `/${u}`
+    }`;
+  }
+
   return (
     <aside className="w-80 bg-[#1e293b] border-l border-gray-700 flex flex-col">
       <div className="flex justify-between items-center p-4 bg-[#0f172a] border-b border-gray-700">
@@ -19,8 +27,8 @@ export default function UserProfileSidebar({
       </div>
       <div className="flex flex-col items-center p-6">
         {user.photo ? (
-          <Image
-            src={user.photo}
+          <img
+            src={fixUrl(user.photo)}
             alt="User"
             width={100}
             height={100}
