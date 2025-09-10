@@ -103,6 +103,14 @@ export default function AdminChatPage() {
           if (p.some((m) => m._id === msg._id)) return p; // ✅ prevent duplicates
           return [...p, { ...msg, fileUrl: fixUrl(msg.fileUrl) }];
         });
+
+        setUsers((prev) =>
+          prev.map((u) =>
+            u._id === msg.sender || u._id === msg.receiver
+              ? { ...u, lastMessageAt: msg.createdAt }
+              : u
+          )
+        );
       }
     };
 
@@ -230,6 +238,14 @@ export default function AdminChatPage() {
           fileUrl: fixUrl(msg.fileUrl),
         },
       ]);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === selected._id
+            ? { ...u, lastMessageAt: new Date().toISOString() }
+            : u
+        )
+      );
+
       setText("");
       setShowEmoji(false);
     } catch (e) {
@@ -269,6 +285,14 @@ export default function AdminChatPage() {
         ];
       });
 
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === selected._id
+            ? { ...u, lastMessageAt: new Date().toISOString() }
+            : u
+        )
+      );
+
       setPreview(null);
     } catch (e) {
       console.error("upload/send error", e);
@@ -285,6 +309,13 @@ export default function AdminChatPage() {
     if (!preview?.blob) return;
     const file = new File([preview.blob], "voice.webm", { type: "audio/webm" });
     await handleChosenFile(file);
+    setUsers((prev) =>
+      prev.map((u) =>
+        u._id === selected?._id
+          ? { ...u, lastMessageAt: new Date().toISOString() }
+          : u
+      )
+    );
   };
 
   const handleSelectUser = async (user: User) => {
@@ -320,16 +351,8 @@ export default function AdminChatPage() {
   );
 
   const sortedUsers = [...filtered].sort((a, b) => {
-    const aLast = messages
-      .filter((m) => m.sender === a._id || m.receiver === a._id)
-      .pop();
-    const bLast = messages
-      .filter((m) => m.sender === b._id || m.receiver === b._id)
-      .pop();
-
-    const aTime = aLast ? new Date(aLast.createdAt).getTime() : 0;
-    const bTime = bLast ? new Date(bLast.createdAt).getTime() : 0;
-
+    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
     return bTime - aTime; // latest first
   });
 
@@ -389,7 +412,7 @@ export default function AdminChatPage() {
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {filtered.map((u) => (
+          {sortedUsers.map((u) => (
             <button
               key={u._id}
               onClick={() => handleSelectUser(u)}

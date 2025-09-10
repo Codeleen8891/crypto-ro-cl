@@ -54,7 +54,7 @@ export default function VerifyOtpPage() {
       <div className="card max-w-md w-full p-8">
         <h1 className="h1 mb-6">Verify Your Email</h1>
         <p className="text-white/70 text-sm mb-4">
-          Enter the 6-digit code we sent to{" "}
+          Check spam folder for the 6-digit code we sent to{" "}
           <span className="font-medium">{email}</span>
         </p>
 
